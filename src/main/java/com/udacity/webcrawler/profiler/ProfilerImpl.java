@@ -41,7 +41,6 @@ final class ProfilerImpl implements Profiler {
     if (!isClassProfiled(klass)) {
       throw new IllegalArgumentException(klass.getName() + "does not consist of profiled methods.");
     }
-
     Object proxy = Proxy.newProxyInstance(
             ProfilerImpl.class.getClassLoader(),
             new Class<?>[]{klass},
