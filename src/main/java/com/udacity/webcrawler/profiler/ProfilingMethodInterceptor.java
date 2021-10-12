@@ -1,8 +1,12 @@
 package com.udacity.webcrawler.profiler;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Objects;
 
 /**
@@ -12,10 +16,17 @@ import java.util.Objects;
 final class ProfilingMethodInterceptor implements InvocationHandler {
 
   private final Clock clock;
+  private final ZonedDateTime zonedDateTime;
+  private final Object delegate;
+  private final ProfilingState profilingState;
+
 
   // TODO: You will need to add more instance fields and constructor arguments to this class.
-  ProfilingMethodInterceptor(Clock clock) {
+  public ProfilingMethodInterceptor(Clock clock, ZonedDateTime zonedDateTime, Object delegate, ProfilingState profilingState) {
     this.clock = Objects.requireNonNull(clock);
+    this.zonedDateTime = zonedDateTime;
+    this.delegate = delegate;
+    this.profilingState = profilingState;
   }
 
   @Override
@@ -25,6 +36,26 @@ final class ProfilingMethodInterceptor implements InvocationHandler {
     //       invoke the method using the object that is being profiled. Finally, for profiled
     //       methods, the interceptor should record how long the method call took, using the
     //       ProfilingState methods.
+
+    Instant currentInstant = null;
+//    Object invokedObject = new Object();
+    boolean getProfiled = method.isAnnotationPresent(Profiled.class);
+    if (getProfiled) {
+      currentInstant = clock.instant();
+    }
+
+    try {
+//      invokedObject = method.invoke(delegate, args);
+      return method.invoke(delegate, args);
+    } catch (InvocationTargetException | IllegalAccessException s) {
+      s.getCause();
+    } finally {
+      if (getProfiled) {
+        Duration howLong = Duration.between(currentInstant, clock.instant());
+        profilingState.record(delegate.getClass(), method, howLong);
+      }
+    }
+//    return invokedObject;
     return null;
   }
 }
