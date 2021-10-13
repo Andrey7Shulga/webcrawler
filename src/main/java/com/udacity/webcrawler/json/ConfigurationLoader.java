@@ -36,7 +36,6 @@ public final class ConfigurationLoader {
       a.printStackTrace();
     }
     return null;
-//    return new CrawlerConfiguration.Builder().build();
   }
 
   /**
@@ -58,6 +57,5 @@ public final class ConfigurationLoader {
       a.printStackTrace();
     }
     return null;
-//    return new CrawlerConfiguration.Builder().build();
   }
 }

@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ final class ParallelWebCrawler implements WebCrawler {
   private final List<Pattern> ignoredUrls;
   private final ForkJoinPool pool;
   private final PageParserFactory pageParserFactory;
+  private final ReentrantLock lock = new ReentrantLock();
 
   @Inject
   ParallelWebCrawler(
@@ -66,7 +68,6 @@ final class ParallelWebCrawler implements WebCrawler {
             .setWordCounts(WordCounts.sort(counts, popularWordCount))
             .setUrlsVisited(visitedUrls.size())
             .build();
-
   }
 
      public class MultiCrawler extends RecursiveTask<Boolean> {
@@ -90,15 +91,23 @@ final class ParallelWebCrawler implements WebCrawler {
          if (maxDepth == 0 || clock.instant().isAfter(deadline)) {
            return false;
          }
+
          for (Pattern pattern : ignoredUrls) {
            if (pattern.matcher(url).matches()) {
              return false;
            }
          }
-         if (visitedUrls.contains(url)) {
-           return false;
+
+         try {
+           lock.lock();
+           if (visitedUrls.contains(url)) {
+             return false;
+           }
+           visitedUrls.add(url);
+         } finally {
+           lock.unlock();
          }
-         visitedUrls.add(url);
+
          PageParser.Result result = pageParserFactory.get(url).parse();
 
          for (ConcurrentMap.Entry<String, Integer> e : result.getWordCounts().entrySet()) {
@@ -113,7 +122,6 @@ final class ParallelWebCrawler implements WebCrawler {
            return true;
        }
      }
-
 
   @Override
   public int getMaxParallelism() {
